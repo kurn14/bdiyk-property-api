@@ -15,6 +15,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'api.key' => \App\Http\Middleware\ApiKeyMiddleware::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'login',
+            'logout',
+            'property-types',
+            'property-types/*',
+            'properties',
+            'properties/*',
+            'bookings',
+            'bookings/*',
+            'user',
+            'web/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
