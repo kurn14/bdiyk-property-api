@@ -7,10 +7,6 @@ use App\Http\Controllers\PropertyTypeController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\BookingController;
 
-Route::get('/{any?}', function () {
-    return file_get_contents(public_path('web/index.html'));
-})->where('any', '.*');
-
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -38,3 +34,8 @@ Route::prefix('web')->middleware('api.key')->group(function () {
     Route::post('/bookings', [App\Http\Controllers\Web\BookingController::class, 'store']);
     Route::put('/bookings/{id}/cancel', [App\Http\Controllers\Web\BookingController::class, 'cancel']);
 });
+
+// Catch-all route for Flutter Web
+Route::get('/{any?}', function () {
+    return file_get_contents(public_path('index.html'));
+})->where('any', '.*');
