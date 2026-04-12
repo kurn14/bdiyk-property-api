@@ -7,9 +7,9 @@ use App\Http\Controllers\PropertyTypeController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\BookingController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/{any?}', function () {
+    return file_get_contents(public_path('web/index.html'));
+})->where('any', '.*');
 
 Route::post('/login', [AuthController::class, 'login']);
 
