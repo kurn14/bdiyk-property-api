@@ -23,6 +23,8 @@ return new class extends Migration
             $table->string('institution')->nullable();
             $table->string('status')->default('booked');
             $table->dateTime('payment_time_limit')->nullable();
+            $table->dateTime('start_date')->nullable();
+            $table->dateTime('end_date')->nullable();
             $table->timestamps();
         });
 

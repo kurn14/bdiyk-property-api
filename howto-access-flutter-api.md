@@ -75,6 +75,8 @@ Authorization: Bearer {token}
 | `search`         | string  | ❌    | Cari berdasarkan kode booking (`booking_code`) |
 | `status`         | string  | ❌    | Filter status (lihat [Referensi Status](#referensi-status-booking) di bawah) |
 | `property_type_id` | integer | ❌  | Filter berdasarkan tipe properti (1-5) |
+| `sort_by`        | string  | ❌    | Kolom sorting: `start_date`, `end_date`, `created_at`, `status`, `booking_code` (default: `created_at`) |
+| `sort_order`     | string  | ❌    | Arah sorting: `asc` (menaik) atau `desc` (menurun). Default: `desc` |
 
 ### Referensi Status Booking
 
@@ -101,6 +103,14 @@ curl -X GET "http://localhost:8001/bookings?search=CL1A" \
 # Filter hanya yang scheduled, 5 item per halaman
 curl -X GET "http://localhost:8001/bookings?status=scheduled&per_page=5" \
      -H "Authorization: Bearer {token}"
+
+# Sorting berdasarkan tanggal masuk terlama dulu
+curl -X GET "http://localhost:8001/bookings?sort_by=start_date&sort_order=asc" \
+     -H "Authorization: Bearer {token}"
+
+# Kombinasi: filter scheduled, urut tanggal keluar terbaru, 10 per halaman
+curl -X GET "http://localhost:8001/bookings?status=scheduled&sort_by=end_date&sort_order=desc&per_page=10" \
+     -H "Authorization: Bearer {token}"
 ```
 
 **Response:**
@@ -118,6 +128,8 @@ curl -X GET "http://localhost:8001/bookings?status=scheduled&per_page=5" \
             "contact_phone": "08123456789",
             "institution": "Kementerian Perindustrian",
             "payment_time_limit": null,
+            "start_date": "2026-04-14 08:00:00",
+            "end_date": "2026-04-14 12:00:00",
             "property": {
                 "id": 1,
                 "name": "Ruang Kelas Borobudur",

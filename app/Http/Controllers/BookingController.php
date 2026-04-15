@@ -30,7 +30,11 @@ class BookingController extends Controller
             });
         }
 
-        $query->orderBy('created_at', 'desc');
+        // Sorting
+        $allowedSortFields = ['start_date', 'end_date', 'created_at', 'status', 'booking_code'];
+        $sortBy = in_array($request->get('sort_by'), $allowedSortFields) ? $request->get('sort_by') : 'created_at';
+        $sortOrder = $request->get('sort_order') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortBy, $sortOrder);
 
         $perPage = (int) $request->get('per_page', 10);
         $bookings = $query->paginate($perPage);
@@ -214,7 +218,7 @@ class BookingController extends Controller
             $bookings->where('status', $request->status);
         }
 
-        $bookings = $bookings->orderBy('created_at', 'desc')->get();
+        $bookings = $bookings->orderBy('start_date', 'desc')->get();
 
         return response()->json([
             'period'     => $period,
@@ -318,7 +322,7 @@ class BookingController extends Controller
                 $q->where('start_time', '<', $dayEnd)
                   ->where('end_time', '>', $dayStart);
             })
-            ->orderBy('created_at', 'desc')
+            ->orderBy('start_date', 'desc')
             ->get();
 
         return response()->json([
