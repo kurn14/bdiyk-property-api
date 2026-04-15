@@ -16,7 +16,8 @@ class PropertyTypeController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string'
+            'description' => 'nullable|string',
+            'is_continuous_booking' => 'nullable|boolean'
         ]);
 
         $propertyType = PropertyType::create($validated);
@@ -45,7 +46,8 @@ class PropertyTypeController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'description' => 'nullable|string'
+            'description' => 'nullable|string',
+            'is_continuous_booking' => 'nullable|boolean'
         ]);
 
         $propertyType->update($validated);

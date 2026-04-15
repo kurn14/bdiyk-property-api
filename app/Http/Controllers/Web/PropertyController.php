@@ -55,26 +55,79 @@ class PropertyController extends Controller
             'end_date' => 'required|date|after:start_date',
         ]);
 
-        $property = Property::find($id);
-
-        if (!$property) {
-            return response()->json(['message' => 'Property not found'], 404);
-        }
-
         $startDate = $request->start_date;
         $endDate = $request->end_date;
 
-        $conflicting = Booking::where('property_id', $id)
-            ->whereNotIn('status', ['cancelled', 'finished'])
-            ->where('start_date', '<', $endDate)
-            ->where('end_date', '>', $startDate)
+        $id = (int) $id;
+        $virtualMapping = [
+            6 => 3, // Request ID 6 -> property_type_id 3 (Kamar VIP)
+            7 => 4, // Request ID 7 -> property_type_id 4 (Kamar 2 Bed)
+            8 => 5, // Request ID 8 -> property_type_id 5 (Kamar 3 Bed)
+        ];
+
+        if (in_array($id, [1, 2, 3, 4, 5])) {
+            $property = Property::find($id);
+            if (!$property) {
+                return response()->json(['message' => 'Property not found'], 404);
+            }
+
+            $conflicting = \App\Models\BookingSchedule::whereHas('booking', function ($q) use ($id) {
+                $q->where('property_id', $id)
+                  ->where(function ($qStatus) {
+                      $qStatus->whereNotIn('status', ['cancelled', 'finished', 'booked'])
+                              ->orWhere(function ($qBooked) {
+                                  $qBooked->where('status', 'booked')
+                                          ->where('payment_time_limit', '>=', now());
+                              });
+                  });
+            })
+            ->where('start_time', '<', $endDate)
+            ->where('end_time', '>', $startDate)
             ->count();
 
-        return response()->json([
-            'property_id' => $id,
-            'available' => $conflicting === 0,
-            'conflicting_bookings' => $conflicting,
-            'message' => $conflicting === 0 ? 'Property tersedia' : 'Property tidak tersedia pada tanggal tersebut'
-        ]);
+            return response()->json([
+                'property_id' => $id,
+                'available' => ($conflicting === 0 && $property->status === 'available'),
+                'conflicting_bookings' => $conflicting,
+                'message' => $conflicting === 0 ? 'Property tersedia' : 'Property tidak tersedia pada tanggal tersebut'
+            ]);
+            
+        } elseif (isset($virtualMapping[$id])) {
+            $targetTypeId = $virtualMapping[$id];
+            $availableRoomsCount = 0;
+            $allRooms = Property::where('property_type_id', $targetTypeId)->get();
+            
+            foreach ($allRooms as $room) {
+                if ($room->status !== 'available') continue;
+                
+                $conflicting = \App\Models\BookingSchedule::whereHas('booking', function ($q) use ($room) {
+                    $q->where('property_id', $room->id)
+                      ->where(function ($qStatus) {
+                          $qStatus->whereNotIn('status', ['cancelled', 'finished', 'booked'])
+                                  ->orWhere(function ($qBooked) {
+                                      $qBooked->where('status', 'booked')
+                                              ->where('payment_time_limit', '>=', now());
+                                  });
+                      });
+                })
+                ->where('start_time', '<', $endDate)
+                ->where('end_time', '>', $startDate)
+                ->exists();
+
+                if (!$conflicting) {
+                    $availableRoomsCount++;
+                }
+            }
+
+            return response()->json([
+                'property_id' => $id,
+                'available' => $availableRoomsCount > 0,
+                'available_count' => $availableRoomsCount,
+                'message' => $availableRoomsCount > 0 ? ('Tersedia ' . $availableRoomsCount . ' kamar') : 'Kamar sudah habis pada tanggal tersebut'
+            ]);
+            
+        } else {
+            return response()->json(['message' => 'ID Properti tidak valid untuk sistem eksternal.'], 404);
+        }
     }
 }

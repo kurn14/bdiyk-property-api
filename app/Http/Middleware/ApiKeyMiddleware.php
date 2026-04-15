@@ -16,7 +16,7 @@ class ApiKeyMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $apiKey = $request->header('X-API-Key');
-        $validKey = env('LAPTOP_B_API_KEY');
+        $validKey = env('API_KEY');
 
         if (!$apiKey || $apiKey !== $validKey) {
             return response()->json([

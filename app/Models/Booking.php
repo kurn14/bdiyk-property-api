@@ -8,7 +8,7 @@ class Booking extends Model
 {
     protected $fillable = [
         'booking_code', 'property_id', 'property_type_id', 'user_id', 'contact_name', 'contact_email', 'contact_phone', 
-        'institution', 'start_date', 'end_date', 'status', 'external_reference'
+        'institution', 'status', 'payment_time_limit'
     ];
 
     protected static function boot()
@@ -80,5 +80,10 @@ class Booking extends Model
             'property_id', // Local key on bookings table...
             'property_type_id' // Local key on properties table...
         );
+    }
+
+    public function schedules()
+    {
+        return $this->hasMany(BookingSchedule::class);
     }
 }

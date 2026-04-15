@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
+            $table->boolean('is_continuous_booking')->default(false);
             $table->timestamps();
         });
     }

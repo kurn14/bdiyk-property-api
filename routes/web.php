@@ -17,6 +17,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('property-types', PropertyTypeController::class);
     Route::apiResource('properties', PropertyController::class);
+
+    // Booking Monitoring & Calendar
+    Route::get('/bookings/monitoring', [BookingController::class, 'monitoring']);
+    Route::get('/bookings/calendar', [BookingController::class, 'calendar']);
+    Route::get('/bookings/calendar/{date}', [BookingController::class, 'calendarDetail']);
+
     Route::apiResource('bookings', BookingController::class);
 });
 
@@ -32,7 +38,8 @@ Route::prefix('web')->middleware('api.key')->group(function () {
 
     // Bookings
     Route::post('/bookings', [App\Http\Controllers\Web\BookingController::class, 'store']);
-    Route::put('/bookings/{id}/cancel', [App\Http\Controllers\Web\BookingController::class, 'cancel']);
+    Route::put('/bookings/{id}/payment', [App\Http\Controllers\Web\BookingController::class, 'payment']);
+    Route::put('/bookings/{code}/cancel', [App\Http\Controllers\Web\BookingController::class, 'cancel']);
 });
 
 // Catch-all route for Flutter Web

@@ -14,11 +14,13 @@ class PropertyController extends Controller
         // Transform the properties to include dynamically calculated status based on SRS 3.5
         $properties->each(function($property) {
             $now = now();
-            $isActiveBooking = $property->bookings()
-                ->whereIn('status', ['scheduled', 'in_use'])
-                ->where('start_date', '<=', $now)
-                ->where('end_date', '>=', $now)
-                ->exists();
+            $isActiveBooking = \App\Models\BookingSchedule::whereHas('booking', function ($q) use ($property) {
+                $q->where('property_id', $property->id)
+                  ->whereIn('status', ['scheduled', 'in_use']);
+            })
+            ->where('start_time', '<=', $now)
+            ->where('end_time', '>=', $now)
+            ->exists();
                 
             // If the manual status is maintenance or used, we keep it, otherwise calculated.
             if (!in_array($property->status, ['maintenance', 'used'])) {
@@ -53,11 +55,13 @@ class PropertyController extends Controller
         }
 
         $now = now();
-        $isActiveBooking = $property->bookings()
-            ->whereIn('status', ['scheduled', 'in_use'])
-            ->where('start_date', '<=', $now)
-            ->where('end_date', '>=', $now)
-            ->exists();
+        $isActiveBooking = \App\Models\BookingSchedule::whereHas('booking', function ($q) use ($property) {
+            $q->where('property_id', $property->id)
+              ->whereIn('status', ['scheduled', 'in_use']);
+        })
+        ->where('start_time', '<=', $now)
+        ->where('end_time', '>=', $now)
+        ->exists();
             
         if (!in_array($property->status, ['maintenance', 'used'])) {
             $property->status = $isActiveBooking ? 'occupied' : 'available';

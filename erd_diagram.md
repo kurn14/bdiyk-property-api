@@ -5,6 +5,7 @@ erDiagram
     USERS ||--o{ BOOKINGS : "has"
     PROPERTY_TYPES ||--o{ PROPERTIES : "has"
     PROPERTIES ||--o{ BOOKINGS : "has"
+    BOOKINGS ||--o{ BOOKING_SCHEDULES : "has"
 
     USERS {
         id PK
@@ -41,9 +42,15 @@ erDiagram
         contact_email
         contact_phone
         institution
-        start_date
-        end_date
         status
+        created_at
+        updated_at
+    }
+    BOOKING_SCHEDULES {
+        id PK
+        booking_id FK
+        start_time
+        end_time
         created_at
         updated_at
     }
@@ -53,6 +60,7 @@ erDiagram
 - property_types 1 → many properties
 - properties 1 → many bookings
 - users 1 → many bookings
+- bookings 1 → many booking_schedules
 
 **Status Values:**
 - Room: available, occupied, used, maintenance

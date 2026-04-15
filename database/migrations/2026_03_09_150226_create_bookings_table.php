@@ -21,10 +21,16 @@ return new class extends Migration
             $table->string('contact_email');
             $table->string('contact_phone');
             $table->string('institution')->nullable();
-            $table->dateTime('start_date');
-            $table->dateTime('end_date');
-            $table->string('status')->default('scheduled');
-            $table->string('external_reference')->nullable()->comment('ID Booking dari Laptop A');
+            $table->string('status')->default('booked');
+            $table->dateTime('payment_time_limit')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('booking_schedules', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('booking_id')->constrained('bookings')->onDelete('cascade');
+            $table->dateTime('start_time');
+            $table->dateTime('end_time');
             $table->timestamps();
         });
     }
@@ -34,6 +40,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('booking_schedules');
         Schema::dropIfExists('bookings');
     }
 };

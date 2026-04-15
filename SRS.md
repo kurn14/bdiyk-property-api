@@ -35,6 +35,7 @@ Flutter Mobile App → REST API (Laravel) → Business Logic → PostgreSQL Data
 
 ### 3.2 Property Type Management
 - Create, view, update, delete property types (Bedroom, Meeting Room)
+- Property Type attributes: name, description, is_continuous_booking (boolean flag indicating whether the booking logic requires a continuous schedule or permits disjoint slot schedules)
 
 ### 3.3 Room Management
 - Add, view, update, delete rooms
@@ -42,7 +43,8 @@ Flutter Mobile App → REST API (Laravel) → Business Logic → PostgreSQL Data
 
 ### 3.4 Booking Management
 - Create, view, edit, cancel bookings
-- Booking attributes: booking code, room, contact name, contact email, contact phone, institution, start date, end date, status (scheduled, in_use, finished, cancelled)
+- Booking attributes: booking code, room, contact name, contact email, contact phone, institution, status (scheduled, in_use, finished, cancelled)
+- Booking schedule attributes: specific time slot arrays (e.g., specific shifts on different days for Meeting Room, or single check-in/out range for Bedroom).
 
 ### 3.5 Room Availability Monitoring
 - Automatic status update based on booking schedule
@@ -68,12 +70,14 @@ Flutter Mobile App → REST API (Laravel) → Business Logic → PostgreSQL Data
 - **users**: Admin accounts
 - **property_types**: Room categories
 - **properties**: Room information
-- **bookings**: Booking schedules
+- **bookings**: Booking metadata (contact, status, unique code)
+- **booking_schedules**: Detailed booking time slots (supports disjoint meeting schedules or continuous bedroom stays)
 
 ### 5.2 Relationships
 - property_types 1 → many properties
 - properties 1 → many bookings
 - users 1 → many bookings
+- bookings 1 → many booking_schedules
 
 ## 6. Example Data
 
