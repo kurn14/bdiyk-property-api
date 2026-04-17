@@ -153,6 +153,7 @@ class BookingController extends Controller
             'status'             => 'booked',
             'payment_time_limit' => now()->addHours((int) env('PAYMENT_TIME_LIMIT_HOURS', 2)),
             'user_id'            => 1, // Default to admin for Web API bookings
+            'source'             => 'web',
         ]);
 
         foreach ($resolvedItems as $resolved) {

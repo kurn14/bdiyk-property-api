@@ -8,7 +8,7 @@ class Booking extends Model
 {
     protected $fillable = [
         'booking_code', 'user_id', 'contact_name', 'contact_email', 'contact_phone',
-        'institution', 'status', 'payment_time_limit', 'start_date', 'end_date'
+        'institution', 'status', 'payment_time_limit', 'start_date', 'end_date', 'source'
     ];
 
     protected static function boot()

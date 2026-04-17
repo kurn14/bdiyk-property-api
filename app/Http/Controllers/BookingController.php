@@ -122,6 +122,7 @@ class BookingController extends Controller
             'institution'   => $validated['institution'] ?? null,
             'status'        => $validated['status'] ?? 'scheduled',
             'user_id'       => $request->user()->id,
+            'source'        => 'flutter',
         ]);
 
         // Create items with schedules
