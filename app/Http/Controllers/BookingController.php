@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\BookingItem;
+use App\Models\BookingSchedule;
 use App\Models\Property;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -11,7 +13,7 @@ class BookingController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Booking::with('property.type', 'user', 'type', 'schedules');
+        $query = Booking::with('items.property.type', 'items.schedules', 'user');
 
         // Search by booking_code
         if ($request->has('search')) {
@@ -23,9 +25,9 @@ class BookingController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Filter by property_type_id
+        // Filter by property_type_id (booking contains at least one item of this type)
         if ($request->has('property_type_id')) {
-            $query->whereHas('property', function ($q) use ($request) {
+            $query->whereHas('items.property', function ($q) use ($request) {
                 $q->where('property_type_id', $request->property_type_id);
             });
         }
@@ -42,19 +44,34 @@ class BookingController extends Controller
         return response()->json($bookings);
     }
 
+    /**
+     * Check if a specific property is available during a given time range.
+     */
     private function isRoomAvailable($propertyId, $startTime, $endTime, $excludeBookingId = null)
     {
-        $query = \App\Models\BookingSchedule::whereHas('booking', function ($q) use ($propertyId, $excludeBookingId) {
-            $q->where('property_id', $propertyId)
-              ->where(function ($qStatus) {
-                  $qStatus->whereNotIn('status', ['cancelled', 'finished', 'booked'])
-                          ->orWhere(function ($qBooked) {
-                              $qBooked->where('status', 'booked')
-                                      ->where('payment_time_limit', '>=', now());
-                          });
-              });
+        $query = BookingSchedule::whereHas('item', function ($q) use ($propertyId, $excludeBookingId) {
+            $q->where('property_id', $propertyId);
             if ($excludeBookingId) {
-                $q->where('id', '!=', $excludeBookingId);
+                $q->whereHas('booking', function ($bq) use ($excludeBookingId) {
+                    $bq->where('id', '!=', $excludeBookingId)
+                       ->where(function ($qStatus) {
+                           $qStatus->whereNotIn('status', ['cancelled', 'finished', 'booked'])
+                                   ->orWhere(function ($qBooked) {
+                                       $qBooked->where('status', 'booked')
+                                               ->where('payment_time_limit', '>=', now());
+                                   });
+                       });
+                });
+            } else {
+                $q->whereHas('booking', function ($bq) {
+                    $bq->where(function ($qStatus) {
+                        $qStatus->whereNotIn('status', ['cancelled', 'finished', 'booked'])
+                                ->orWhere(function ($qBooked) {
+                                    $qBooked->where('status', 'booked')
+                                            ->where('payment_time_limit', '>=', now());
+                                });
+                    });
+                });
             }
         })
         ->where('start_time', '<', $endTime)
@@ -66,54 +83,57 @@ class BookingController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'property_id' => 'required|exists:properties,id',
-            'contact_name' => 'required|string|max:255',
+            'contact_name'  => 'required|string|max:255',
             'contact_email' => 'required|email|max:255',
             'contact_phone' => 'required|string|max:20',
-            'institution' => 'nullable|string|max:255',
-            'schedules' => 'required|array|min:1',
-            'schedules.*.start_time' => 'required|date',
-            'schedules.*.end_time' => 'required|date|after:schedules.*.start_time',
-            'status' => 'nullable|string|in:booked,scheduled,in_use,finished,cancelled'
+            'institution'   => 'nullable|string|max:255',
+            'status'        => 'nullable|string|in:booked,scheduled,in_use,finished,cancelled',
+            'items'         => 'required|array|min:1',
+            'items.*.property_id' => 'required|exists:properties,id',
+            'items.*.schedules'   => 'required|array|min:1',
+            'items.*.schedules.*.start_time' => 'required|date',
+            'items.*.schedules.*.end_time'   => 'required|date|after:items.*.schedules.*.start_time',
         ]);
 
-        $property = Property::find($validated['property_id']);
-        $propertyTypeId = $property->property_type_id;
-
-        // Validasi Aturan Jam Operasional & Overlap per Jadwal
-        foreach ($validated['schedules'] as $schedule) {
-            $start = Carbon::parse($schedule['start_time']);
-            $end = Carbon::parse($schedule['end_time']);
-
-            if (!$property->type->is_continuous_booking) {
-                // Disjoint schedule (Ruang Kelas / Meeting)
-                if ($start->format('H:i') < '06:00') {
-                    // Start minimum at 06:00 (or whatever business rule applies)
+        // Validate availability for every item
+        foreach ($validated['items'] as $itemData) {
+            $property = Property::with('type')->find($itemData['property_id']);
+            foreach ($itemData['schedules'] as $schedule) {
+                if (!$this->isRoomAvailable($itemData['property_id'], $schedule['start_time'], $schedule['end_time'])) {
+                    return response()->json([
+                        'message' => 'Ruangan "' . $property->name . '" sudah dipesan pada jadwal tanggal dan jam tersebut'
+                    ], 409);
                 }
-            } else {
-                // Continuous schedule (Kamar Inap)
-                // Start minimum at 14:00 (Check-in), Check-out at 12:00
-            }
-
-            if (!$this->isRoomAvailable($validated['property_id'], $schedule['start_time'], $schedule['end_time'])) {
-                return response()->json(['message' => 'Ruangan sudah dipesan pada jadwal tanggal dan jam tersebut'], 409);
             }
         }
-        
-        $validated['user_id'] = $request->user()->id;
 
-        $booking = Booking::create($validated);
-        foreach ($validated['schedules'] as $schedule) {
-            $booking->schedules()->create($schedule);
+        // Create booking
+        $booking = Booking::create([
+            'contact_name'  => $validated['contact_name'],
+            'contact_email' => $validated['contact_email'],
+            'contact_phone' => $validated['contact_phone'],
+            'institution'   => $validated['institution'] ?? null,
+            'status'        => $validated['status'] ?? 'scheduled',
+            'user_id'       => $request->user()->id,
+        ]);
+
+        // Create items with schedules
+        foreach ($validated['items'] as $itemData) {
+            $item = $booking->items()->create([
+                'property_id' => $itemData['property_id'],
+            ]);
+            foreach ($itemData['schedules'] as $schedule) {
+                $item->schedules()->create($schedule);
+            }
         }
-        
-        $booking->load('schedules');
+
+        $booking->load('items.property.type', 'items.schedules');
         return response()->json($booking, 201);
     }
 
     public function show($id)
     {
-        $booking = Booking::with('property.type', 'user', 'type', 'schedules')->find($id);
+        $booking = Booking::with('items.property.type', 'items.schedules', 'user')->find($id);
 
         if (!$booking) {
             return response()->json(['message' => 'Booking not found'], 404);
@@ -131,36 +151,48 @@ class BookingController extends Controller
         }
 
         $validated = $request->validate([
-            'property_id' => 'sometimes|exists:properties,id',
-            'contact_name' => 'sometimes|string|max:255',
+            'contact_name'  => 'sometimes|string|max:255',
             'contact_email' => 'sometimes|email|max:255',
             'contact_phone' => 'sometimes|string|max:20',
-            'institution' => 'nullable|string|max:255',
-            'schedules' => 'sometimes|array|min:1',
-            'schedules.*.start_time' => 'required_with:schedules|date',
-            'schedules.*.end_time' => 'required_with:schedules|date|after:schedules.*.start_time',
-            'status' => 'sometimes|string|in:booked,scheduled,in_use,finished,cancelled'
+            'institution'   => 'nullable|string|max:255',
+            'status'        => 'sometimes|string|in:booked,scheduled,in_use,finished,cancelled',
+            'items'         => 'sometimes|array|min:1',
+            'items.*.property_id' => 'required_with:items|exists:properties,id',
+            'items.*.schedules'   => 'required_with:items|array|min:1',
+            'items.*.schedules.*.start_time' => 'required_with:items|date',
+            'items.*.schedules.*.end_time'   => 'required_with:items|date',
         ]);
 
-        if (isset($validated['schedules'])) {
-            $propertyId = $validated['property_id'] ?? $booking->property_id;
-            foreach ($validated['schedules'] as $schedule) {
-                if (!$this->isRoomAvailable($propertyId, $schedule['start_time'], $schedule['end_time'], $booking->id)) {
-                    return response()->json(['message' => 'Ruangan sudah dipesan pada jadwal tanggal dan jam tersebut'], 409);
+        if (isset($validated['items'])) {
+            foreach ($validated['items'] as $itemData) {
+                foreach ($itemData['schedules'] as $schedule) {
+                    if (!$this->isRoomAvailable($itemData['property_id'], $schedule['start_time'], $schedule['end_time'], $booking->id)) {
+                        $prop = Property::find($itemData['property_id']);
+                        return response()->json(['message' => 'Ruangan "' . $prop->name . '" sudah dipesan pada jadwal tanggal dan jam tersebut'], 409);
+                    }
                 }
             }
         }
 
-        $booking->update($validated);
-        
-        if (isset($validated['schedules'])) {
-            $booking->schedules()->delete();
-            foreach ($validated['schedules'] as $schedule) {
-                $booking->schedules()->create($schedule);
+        // Update booking fields (without items)
+        $bookingFields = collect($validated)->except('items')->toArray();
+        $booking->update($bookingFields);
+
+        // Replace items if provided
+        if (isset($validated['items'])) {
+            // Delete old items (cascades to schedules)
+            $booking->items()->delete();
+            foreach ($validated['items'] as $itemData) {
+                $item = $booking->items()->create([
+                    'property_id' => $itemData['property_id'],
+                ]);
+                foreach ($itemData['schedules'] as $schedule) {
+                    $item->schedules()->create($schedule);
+                }
             }
         }
-        
-        $booking->load('schedules');
+
+        $booking->load('items.property.type', 'items.schedules');
         return response()->json($booking);
     }
 
@@ -172,7 +204,7 @@ class BookingController extends Controller
             return response()->json(['message' => 'Booking not found'], 404);
         }
 
-        $booking->schedules()->delete();
+        // Items and schedules cascade delete via FK
         $booking->delete();
 
         return response()->json(['message' => 'Booking deleted successfully']);
@@ -180,7 +212,6 @@ class BookingController extends Controller
 
     /**
      * Monitoring: filter bookings by period (daily/weekly/monthly).
-     * GET /bookings/monitoring?period=daily|weekly|monthly&date=YYYY-MM-DD&status=scheduled
      */
     public function monitoring(Request $request)
     {
@@ -208,8 +239,8 @@ class BookingController extends Controller
                 break;
         }
 
-        $bookings = Booking::with('property.type', 'schedules', 'user')
-            ->whereHas('schedules', function ($q) use ($startDate, $endDate) {
+        $bookings = Booking::with('items.property.type', 'items.schedules', 'user')
+            ->whereHas('items.schedules', function ($q) use ($startDate, $endDate) {
                 $q->where('start_time', '<', $endDate)
                   ->where('end_time', '>', $startDate);
             });
@@ -231,7 +262,6 @@ class BookingController extends Controller
 
     /**
      * Calendar: show property usage count per date for a month/week.
-     * GET /bookings/calendar?mode=monthly|weekly&date=YYYY-MM-DD
      */
     public function calendar(Request $request)
     {
@@ -252,8 +282,8 @@ class BookingController extends Controller
         }
 
         // Get all schedules in range with active bookings
-        $schedules = \App\Models\BookingSchedule::with('booking.property')
-            ->whereHas('booking', function ($q) {
+        $schedules = BookingSchedule::with('item.booking', 'item.property')
+            ->whereHas('item.booking', function ($q) {
                 $q->where(function ($qStatus) {
                     $qStatus->whereNotIn('status', ['cancelled', 'booked'])
                             ->orWhere(function ($qBooked) {
@@ -274,19 +304,15 @@ class BookingController extends Controller
             $dayStart = $cursor->copy()->startOfDay();
             $dayEnd   = $cursor->copy()->endOfDay();
 
-            // Count unique properties used on this date
-            $propertyIds = $schedules->filter(function ($schedule) use ($dayStart, $dayEnd) {
+            $activeSchedules = $schedules->filter(function ($schedule) use ($dayStart, $dayEnd) {
                 return Carbon::parse($schedule->start_time)->lt($dayEnd)
                     && Carbon::parse($schedule->end_time)->gt($dayStart);
-            })->pluck('booking.property_id')->unique();
+            });
 
             $dates[] = [
                 'date'           => $dateStr,
-                'property_count' => $propertyIds->count(),
-                'booking_count'  => $schedules->filter(function ($schedule) use ($dayStart, $dayEnd) {
-                    return Carbon::parse($schedule->start_time)->lt($dayEnd)
-                        && Carbon::parse($schedule->end_time)->gt($dayStart);
-                })->pluck('booking_id')->unique()->count(),
+                'property_count' => $activeSchedules->pluck('item.property_id')->unique()->count(),
+                'booking_count'  => $activeSchedules->pluck('item.booking_id')->unique()->count(),
             ];
 
             $cursor->addDay();
@@ -302,7 +328,6 @@ class BookingController extends Controller
 
     /**
      * Calendar Detail: list bookings for a specific date.
-     * GET /bookings/calendar/{date}
      */
     public function calendarDetail($date)
     {
@@ -310,7 +335,7 @@ class BookingController extends Controller
         $dayStart = $targetDate->copy()->startOfDay();
         $dayEnd   = $targetDate->copy()->endOfDay();
 
-        $bookings = Booking::with('property.type', 'schedules', 'user')
+        $bookings = Booking::with('items.property.type', 'items.schedules', 'user')
             ->where(function ($qStatus) {
                 $qStatus->whereNotIn('status', ['cancelled', 'booked'])
                         ->orWhere(function ($qBooked) {
@@ -318,7 +343,7 @@ class BookingController extends Controller
                                     ->where('payment_time_limit', '>=', now());
                         });
             })
-            ->whereHas('schedules', function ($q) use ($dayStart, $dayEnd) {
+            ->whereHas('items.schedules', function ($q) use ($dayStart, $dayEnd) {
                 $q->where('start_time', '<', $dayEnd)
                   ->where('end_time', '>', $dayStart);
             })

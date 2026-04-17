@@ -15,8 +15,14 @@ class Property extends Model
         return $this->belongsTo(PropertyType::class, 'property_type_id');
     }
 
+    public function items()
+    {
+        return $this->hasMany(BookingItem::class);
+    }
+
     public function bookings()
     {
-        return $this->hasMany(Booking::class);
+        return $this->belongsToMany(Booking::class, 'booking_items', 'property_id', 'booking_id')
+                    ->withTimestamps();
     }
 }

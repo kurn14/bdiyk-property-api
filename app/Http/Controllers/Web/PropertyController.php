@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Property;
-use App\Models\Booking;
+use App\Models\BookingSchedule;
 use Illuminate\Http\Request;
 
 class PropertyController extends Controller
@@ -71,14 +71,16 @@ class PropertyController extends Controller
                 return response()->json(['message' => 'Property not found'], 404);
             }
 
-            $conflicting = \App\Models\BookingSchedule::whereHas('booking', function ($q) use ($id) {
+            $conflicting = BookingSchedule::whereHas('item', function ($q) use ($id) {
                 $q->where('property_id', $id)
-                  ->where(function ($qStatus) {
-                      $qStatus->whereNotIn('status', ['cancelled', 'finished', 'booked'])
-                              ->orWhere(function ($qBooked) {
-                                  $qBooked->where('status', 'booked')
-                                          ->where('payment_time_limit', '>=', now());
-                              });
+                  ->whereHas('booking', function ($bq) {
+                      $bq->where(function ($qStatus) {
+                          $qStatus->whereNotIn('status', ['cancelled', 'finished', 'booked'])
+                                  ->orWhere(function ($qBooked) {
+                                      $qBooked->where('status', 'booked')
+                                              ->where('payment_time_limit', '>=', now());
+                                  });
+                      });
                   });
             })
             ->where('start_time', '<', $endDate)
@@ -100,14 +102,16 @@ class PropertyController extends Controller
             foreach ($allRooms as $room) {
                 if ($room->status !== 'available') continue;
                 
-                $conflicting = \App\Models\BookingSchedule::whereHas('booking', function ($q) use ($room) {
+                $conflicting = BookingSchedule::whereHas('item', function ($q) use ($room) {
                     $q->where('property_id', $room->id)
-                      ->where(function ($qStatus) {
-                          $qStatus->whereNotIn('status', ['cancelled', 'finished', 'booked'])
-                                  ->orWhere(function ($qBooked) {
-                                      $qBooked->where('status', 'booked')
-                                              ->where('payment_time_limit', '>=', now());
-                                  });
+                      ->whereHas('booking', function ($bq) {
+                          $bq->where(function ($qStatus) {
+                              $qStatus->whereNotIn('status', ['cancelled', 'finished', 'booked'])
+                                      ->orWhere(function ($qBooked) {
+                                          $qBooked->where('status', 'booked')
+                                                  ->where('payment_time_limit', '>=', now());
+                                      });
+                          });
                       });
                 })
                 ->where('start_time', '<', $endDate)

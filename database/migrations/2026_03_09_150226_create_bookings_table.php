@@ -13,9 +13,7 @@ return new class extends Migration
     {
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
-            $table->string('booking_code', 6)->unique();
-            $table->foreignId('property_id')->constrained('properties')->onDelete('cascade');
-            $table->foreignId('property_type_id')->nullable()->constrained('property_types')->onDelete('cascade');
+            $table->string('booking_code', 8)->unique();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('contact_name');
             $table->string('contact_email');
@@ -28,9 +26,16 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('booking_schedules', function (Blueprint $table) {
+        Schema::create('booking_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('booking_id')->constrained('bookings')->onDelete('cascade');
+            $table->foreignId('property_id')->constrained('properties')->onDelete('cascade');
+            $table->timestamps();
+        });
+
+        Schema::create('booking_schedules', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('booking_item_id')->constrained('booking_items')->onDelete('cascade');
             $table->dateTime('start_time');
             $table->dateTime('end_time');
             $table->timestamps();
@@ -43,6 +48,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('booking_schedules');
+        Schema::dropIfExists('booking_items');
         Schema::dropIfExists('bookings');
     }
 };

@@ -21,18 +21,8 @@ class SyncBookingDatesCommand extends Command
         
         $count = 0;
         foreach ($bookings as $booking) {
-            $minStart = $booking->schedules()->min('start_time');
-            $maxEnd = $booking->schedules()->max('end_time');
-            
-            if ($minStart && $maxEnd) {
-                $booking->withoutEvents(function() use ($booking, $minStart, $maxEnd) {
-                    $booking->update([
-                        'start_date' => $minStart,
-                        'end_date' => $maxEnd,
-                    ]);
-                });
-                $count++;
-            }
+            $booking->syncDates();
+            $count++;
         }
         
         $this->info("Successfully synced dates for {$count} bookings.");

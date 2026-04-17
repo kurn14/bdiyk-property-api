@@ -7,28 +7,22 @@ use Illuminate\Database\Eloquent\Model;
 class BookingSchedule extends Model
 {
     protected $fillable = [
-        'booking_id',
+        'booking_item_id',
         'start_time',
         'end_time',
     ];
 
-    public function booking()
+    public function item()
     {
-        return $this->belongsTo(Booking::class);
+        return $this->belongsTo(BookingItem::class, 'booking_item_id');
     }
 
     protected static function booted()
     {
         $syncDates = function ($schedule) {
-            $booking = $schedule->booking;
-            if ($booking) {
-                // Update start_date & end_date from min & max schedules
-                $booking->withoutEvents(function () use ($booking) {
-                    $booking->update([
-                        'start_date' => $booking->schedules()->min('start_time'),
-                        'end_date' => $booking->schedules()->max('end_time'),
-                    ]);
-                });
+            $item = $schedule->item;
+            if ($item && $item->booking) {
+                $item->booking->syncDates();
             }
         };
 
