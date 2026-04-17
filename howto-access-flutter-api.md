@@ -120,8 +120,7 @@ curl -X GET "http://localhost:8001/bookings?status=scheduled&sort_by=end_date&so
     "data": [
         {
             "id": 1,
-            "booking_code": "CL1A2B",
-            "property_id": 1,
+            "booking_code": "BK1A2B",
             "status": "scheduled",
             "contact_name": "Budi Santoso",
             "contact_email": "budi@instansi.go.id",
@@ -130,13 +129,19 @@ curl -X GET "http://localhost:8001/bookings?status=scheduled&sort_by=end_date&so
             "payment_time_limit": null,
             "start_date": "2026-04-14 08:00:00",
             "end_date": "2026-04-14 12:00:00",
-            "property": {
-                "id": 1,
-                "name": "Ruang Kelas Borobudur",
-                "type": { "id": 1, "name": "Ruang Kelas" }
-            },
-            "schedules": [
-                { "id": 1, "start_time": "2026-04-14 08:00:00", "end_time": "2026-04-14 12:00:00" }
+            "items": [
+                {
+                    "id": 1,
+                    "property_id": 1,
+                    "property": {
+                        "id": 1,
+                        "name": "Ruang Kelas Borobudur",
+                        "type": { "id": 1, "name": "Ruang Kelas" }
+                    },
+                    "schedules": [
+                        { "id": 1, "start_time": "2026-04-14 08:00:00", "end_time": "2026-04-14 12:00:00" }
+                    ]
+                }
             ],
             "user": { "id": 1, "name": "Admin" }
         }
@@ -177,15 +182,22 @@ Authorization: Bearer {token}
 **Request Body:**
 ```json
 {
-    "property_id": 1,
     "contact_name": "Andi Saputra",
     "contact_email": "andi@mail.com",
     "contact_phone": "08987654321",
     "institution": "PT Maju Jaya",
-    "schedules": [
+    "items": [
         {
-            "start_time": "2026-04-20 08:00:00",
-            "end_time": "2026-04-20 12:00:00"
+            "property_id": 1,
+            "schedules": [
+                { "start_time": "2026-04-20 08:00:00", "end_time": "2026-04-20 12:00:00" }
+            ]
+        },
+        {
+            "property_id": 6,
+            "schedules": [
+                { "start_time": "2026-04-20 14:00:00", "end_time": "2026-04-22 12:00:00" }
+            ]
         }
     ]
 }
@@ -195,12 +207,27 @@ Authorization: Bearer {token}
 ```json
 {
     "id": 5,
-    "booking_code": "CL5X9Z",
-    "property_id": 1,
-    "status": "booked",
-    "payment_time_limit": "2026-04-15 16:00:00",
-    "schedules": [
-        { "start_time": "2026-04-20 08:00:00", "end_time": "2026-04-20 12:00:00" }
+    "booking_code": "BK5X9Z",
+    "status": "scheduled",
+    "start_date": "2026-04-20 08:00:00",
+    "end_date": "2026-04-22 12:00:00",
+    "items": [
+        {
+            "id": 1,
+            "property_id": 1,
+            "property": { "id": 1, "name": "Ruang Kelas Borobudur", "type": { "name": "Ruang Kelas" } },
+            "schedules": [
+                { "start_time": "2026-04-20 08:00:00", "end_time": "2026-04-20 12:00:00" }
+            ]
+        },
+        {
+            "id": 2,
+            "property_id": 6,
+            "property": { "id": 6, "name": "Kamar 101", "type": { "name": "Kamar VIP" } },
+            "schedules": [
+                { "start_time": "2026-04-20 14:00:00", "end_time": "2026-04-22 12:00:00" }
+            ]
+        }
     ]
 }
 ```
@@ -216,9 +243,19 @@ Authorization: Bearer {token}
 ```json
 {
     "status": "scheduled",
-    "contact_name": "Nama Baru"
+    "contact_name": "Nama Baru",
+    "items": [
+        {
+            "property_id": 1,
+            "schedules": [
+                { "start_time": "2026-04-20 08:00:00", "end_time": "2026-04-20 14:00:00" }
+            ]
+        }
+    ]
 }
 ```
+
+> **Catatan:** Jika `items` dikirim, semua item lama akan **dihapus dan diganti** dengan item baru.
 
 ### 2.5. Hapus Booking
 
@@ -280,41 +317,43 @@ curl -X GET "http://localhost:8001/bookings/monitoring?period=monthly&date=2026-
     "end_date": "2026-04-19",
     "total": 3,
     "data": [
-        {
+         {
             "id": 1,
-            "booking_code": "CL1A2B",
-            "property_id": 1,
+            "booking_code": "BK1A2B",
             "status": "scheduled",
             "contact_name": "Budi Santoso",
-            "contact_email": "budi@instansi.go.id",
-            "contact_phone": "08123456789",
-            "institution": "Kementerian Perindustrian",
-            "payment_time_limit": null,
-            "property": {
-                "id": 1,
-                "name": "Ruang Kelas Borobudur",
-                "type": { "id": 1, "name": "Ruang Kelas" }
-            },
-            "schedules": [
-                { "id": 1, "start_time": "2026-04-14 08:00:00", "end_time": "2026-04-14 12:00:00" },
-                { "id": 2, "start_time": "2026-04-15 13:00:00", "end_time": "2026-04-15 16:00:00" }
+            "start_date": "2026-04-14 08:00:00",
+            "end_date": "2026-04-15 16:00:00",
+            "items": [
+                {
+                    "id": 1,
+                    "property_id": 1,
+                    "property": { "id": 1, "name": "Ruang Kelas Borobudur", "type": { "name": "Ruang Kelas" } },
+                    "schedules": [
+                        { "start_time": "2026-04-14 08:00:00", "end_time": "2026-04-14 12:00:00" },
+                        { "start_time": "2026-04-15 13:00:00", "end_time": "2026-04-15 16:00:00" }
+                    ]
+                }
             ],
             "user": { "id": 1, "name": "Admin" }
         },
         {
             "id": 2,
-            "booking_code": "VP3C4D",
-            "property_id": 6,
+            "booking_code": "BK3C4D",
             "status": "booked",
             "contact_name": "Andi Saputra",
             "payment_time_limit": "2026-04-14 16:00:00",
-            "property": {
-                "id": 6,
-                "name": "Kamar 101",
-                "type": { "id": 3, "name": "Kamar VIP" }
-            },
-            "schedules": [
-                { "id": 3, "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
+            "start_date": "2026-04-14 14:00:00",
+            "end_date": "2026-04-17 12:00:00",
+            "items": [
+                {
+                    "id": 2,
+                    "property_id": 6,
+                    "property": { "id": 6, "name": "Kamar 101", "type": { "name": "Kamar VIP" } },
+                    "schedules": [
+                        { "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
+                    ]
+                }
             ],
             "user": { "id": 1, "name": "Admin" }
         }
@@ -430,41 +469,40 @@ curl -X GET "http://localhost:8001/bookings/calendar/2026-04-14" \
     "data": [
         {
             "id": 1,
-            "booking_code": "CL1A2B",
-            "property_id": 1,
+            "booking_code": "BK1A2B",
             "status": "scheduled",
             "contact_name": "Budi Santoso",
-            "contact_email": "budi@instansi.go.id",
-            "contact_phone": "08123456789",
-            "institution": "Kementerian Perindustrian",
-            "payment_time_limit": null,
-            "property": {
-                "id": 1,
-                "name": "Ruang Kelas Borobudur",
-                "type": { "id": 1, "name": "Ruang Kelas" }
-            },
-            "schedules": [
-                { "id": 1, "start_time": "2026-04-14 08:00:00", "end_time": "2026-04-14 12:00:00" }
+            "start_date": "2026-04-14 08:00:00",
+            "end_date": "2026-04-17 16:00:00",
+            "items": [
+                {
+                    "id": 1,
+                    "property_id": 1,
+                    "property": { "id": 1, "name": "Ruang Kelas Borobudur", "type": { "name": "Ruang Kelas" } },
+                    "schedules": [
+                        { "start_time": "2026-04-14 08:00:00", "end_time": "2026-04-14 12:00:00" }
+                    ]
+                }
             ],
             "user": { "id": 1, "name": "Admin" }
         },
         {
             "id": 2,
-            "booking_code": "VP3C4D",
-            "property_id": 6,
+            "booking_code": "BK3C4D",
             "status": "booked",
             "contact_name": "Andi Saputra",
-            "contact_email": "andi@perusahaan.com",
-            "contact_phone": "08987654321",
-            "institution": "PT Maju Jaya",
             "payment_time_limit": "2026-04-14 16:00:00",
-            "property": {
-                "id": 6,
-                "name": "Kamar 101",
-                "type": { "id": 3, "name": "Kamar VIP" }
-            },
-            "schedules": [
-                { "id": 3, "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
+            "start_date": "2026-04-14 14:00:00",
+            "end_date": "2026-04-17 12:00:00",
+            "items": [
+                {
+                    "id": 2,
+                    "property_id": 6,
+                    "property": { "id": 6, "name": "Kamar 101", "type": { "name": "Kamar VIP" } },
+                    "schedules": [
+                        { "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
+                    ]
+                }
             ],
             "user": { "id": 1, "name": "Admin" }
         }

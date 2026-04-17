@@ -151,7 +151,7 @@ curl -X GET "http://localhost:8000/web/properties/6/availability?start_date=2026
 
 ## 4. Melakukan Pemesanan (Booking Awal)
 
-> **Catatan Penting:** Properti yang dipesan menggunakan endpoint ini akan memiliki status awal **`booked`** dan nilai **`payment_time_limit`** (default 2 jam). Di fase ini, ketersediaan ruangan **sudah dikunci (diblokir)** dari pengguna lain. Tapi jika tidak segera dibayar dan dikonfirmasi lewat [Konfirmasi Pembayaran](#5-konfirmasi-pembayaran-lock-ruangan) sebelum `payment_time_limit` tersebut lewat, maka sistem otomatis akan membatalkan pemesanan dan melepas kembali ketersediaan ruangannya ke publik.
+> **Catatan Penting:** Sekarang **satu booking bisa berisi banyak properti sekaligus** (misal: 2 ruang kelas + 8 kamar). Properti yang dipesan akan memiliki status awal **`booked`** dan nilai **`payment_time_limit`** (default 2 jam). Di fase ini, ketersediaan ruangan **sudah dikunci (diblokir)** dari pengguna lain. Jika tidak segera dibayar sebelum `payment_time_limit` terlewat, sistem otomatis membatalkan seluruh pemesanan.
 
 ### Endpoint
 
@@ -163,19 +163,20 @@ POST /web/bookings
 
 | Parameter | Tipe | Wajib | Keterangan |
 |:---|:---|:---|:---|
-| `property_id` | integer | ✅ | ID Produk (1-8). Lihat [Tabel Katalog](#tabel-katalog-produk-website) |
 | `contact_name` | string | ✅ | Nama pemesan |
 | `contact_email` | string (email) | ✅ | Email pemesan |
 | `contact_phone` | string | ✅ | Nomor telepon pemesan |
 | `institution` | string | ❌ | Nama instansi/lembaga |
-| `quantity` | integer | ❌ | Jumlah kamar *(hanya untuk ID 6, 7, 8; default: 1)* |
-| `schedules` | array | ✅ | Array jadwal pemesanan (minimal 1 item) |
-| `schedules[].start_time` | string (datetime) | ✅ | Waktu mulai, format: `YYYY-MM-DD HH:MM:SS` |
-| `schedules[].end_time` | string (datetime) | ✅ | Waktu selesai, format: `YYYY-MM-DD HH:MM:SS` |
+| `items` | array | ✅ | Array item yang dipesan (minimal 1) |
+| `items[].property_id` | integer | ✅ | ID Produk (1-8). Lihat [Tabel Katalog](#tabel-katalog-produk-website) |
+| `items[].quantity` | integer | ❌ | Jumlah kamar *(hanya untuk ID 6, 7, 8; default: 1)* |
+| `items[].schedules` | array | ✅ | Array jadwal pemesanan item ini (minimal 1) |
+| `items[].schedules[].start_time` | string (datetime) | ✅ | Waktu mulai, format: `YYYY-MM-DD HH:MM:SS` |
+| `items[].schedules[].end_time` | string (datetime) | ✅ | Waktu selesai, format: `YYYY-MM-DD HH:MM:SS` |
 
 ---
 
-### Skenario A: Memesan Ruang Kelas / Ruang Rapat (ID 1-5)
+### Skenario A: Memesan Ruang Kelas Saja (ID 1-5)
 
 Pemesanan jadwal bisa **loncat-loncat** (disjoint). Cocok untuk kegiatan pelatihan yang tidak setiap hari.
 
@@ -186,96 +187,72 @@ curl -X POST http://localhost:8000/web/bookings \
      -H "Accept: application/json" \
      -H "Content-Type: application/json" \
      -d '{
-       "property_id": 1,
        "contact_name": "Budi Santoso",
        "contact_email": "budi@instansi.go.id",
        "contact_phone": "08123456789",
        "institution": "Kementerian Perindustrian",
-       "schedules": [
+       "items": [
          {
-           "start_time": "2026-04-14 08:00:00",
-           "end_time": "2026-04-14 12:00:00"
-         },
-         {
-           "start_time": "2026-04-15 13:00:00",
-           "end_time": "2026-04-15 16:00:00"
-         },
-         {
-           "start_time": "2026-04-17 08:00:00",
-           "end_time": "2026-04-17 16:00:00"
+           "property_id": 1,
+           "schedules": [
+             { "start_time": "2026-04-14 08:00:00", "end_time": "2026-04-14 12:00:00" },
+             { "start_time": "2026-04-15 13:00:00", "end_time": "2026-04-15 16:00:00" },
+             { "start_time": "2026-04-17 08:00:00", "end_time": "2026-04-17 16:00:00" }
+           ]
          }
        ]
      }'
 ```
 
-> **Catatan:** Perhatikan bahwa tanggal 16 April tidak diisi — jadwal boleh loncat tanpa masalah.
-
 **Response Sukses (201 Created):**
 ```json
 {
-    "data": [
-         {
-            "id": 1,
-            "booking_code": "CL1A2B",
-            "property_id": 1,
-            "contact_name": "Budi Santoso",
-            "contact_email": "budi@instansi.go.id",
-            "contact_phone": "08123456789",
-            "institution": "Kementerian Perindustrian",
-            "status": "booked",
-            "payment_time_limit": "2026-04-14 16:00:00",
-            "schedules": [
-                {
-                    "id": 1,
-                    "start_time": "2026-04-14 08:00:00",
-                    "end_time": "2026-04-14 12:00:00"
-                },
-                {
-                    "id": 2,
-                    "start_time": "2026-04-15 13:00:00",
-                    "end_time": "2026-04-15 16:00:00"
-                },
-                {
-                    "id": 3,
-                    "start_time": "2026-04-17 08:00:00",
-                    "end_time": "2026-04-17 16:00:00"
-                }
-            ],
-            "property": {
+    "data": {
+        "id": 1,
+        "booking_code": "QW8R9Y",
+        "status": "booked",
+        "payment_time_limit": "2026-04-14 16:00:00",
+        "contact_name": "Budi Santoso",
+        "items": [
+            {
                 "id": 1,
-                "name": "Ruang Kelas Borobudur",
-                "type": { "id": 1, "name": "Ruang Kelas" }
+                "property_id": 1,
+                "property": { "id": 1, "name": "Ruang Kelas Borobudur", "type": { "name": "Ruang Kelas" } },
+                "schedules": [
+                    { "start_time": "2026-04-14 08:00:00", "end_time": "2026-04-14 12:00:00" },
+                    { "start_time": "2026-04-15 13:00:00", "end_time": "2026-04-15 16:00:00" },
+                    { "start_time": "2026-04-17 08:00:00", "end_time": "2026-04-17 16:00:00" }
+                ]
             }
-        }
-    ]
+        ]
+    }
 }
 ```
 
-> **Penting:** Simpan nilai `booking_code` (contoh: `CL1A2B`) dari response ke database lokal Anda. Kode ini adalah identifier unik yang dihasilkan otomatis oleh server dan dapat digunakan untuk referensi silang antar sistem.
-
 ---
 
-### Skenario B: Memesan Kamar Inap (ID 6, 7, 8)
+### Skenario B: Memesan Kamar Inap Saja (ID 6, 7, 8)
 
-Pemesanan kamar menggunakan jadwal **kontinu** (check-in sampai check-out). Tambahkan parameter `quantity` untuk memesan lebih dari 1 kamar.
+Pemesanan kamar menggunakan jadwal **kontinu** (check-in sampai check-out). Gunakan `quantity` untuk memesan lebih dari 1 kamar.
 
-**Request (3 kamar VIP, check-in 14 April check-out 17 April):**
+**Request (3 kamar VIP):**
 ```bash
 curl -X POST http://localhost:8000/web/bookings \
      -H "X-API-Key: secret_api_key_123" \
      -H "Accept: application/json" \
      -H "Content-Type: application/json" \
      -d '{
-       "property_id": 6,
-       "quantity": 3,
        "contact_name": "Andi Saputra",
        "contact_email": "andi@perusahaan.com",
        "contact_phone": "08987654321",
        "institution": "PT Maju Jaya",
-       "schedules": [
+       "items": [
          {
-           "start_time": "2026-04-14 14:00:00",
-           "end_time": "2026-04-17 12:00:00"
+           "property_id": 6,
+           "quantity": 3,
+           "schedules": [
+             { "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
+           ]
          }
        ]
      }'
@@ -283,55 +260,99 @@ curl -X POST http://localhost:8000/web/bookings \
 
 **Response Sukses (201 Created):**
 
-API mengembalikan **3 booking terpisah**, masing-masing sudah di-assign ke kamar VIP spesifik yang tersedia.
+API mengembalikan **1 booking** dengan **3 items** (masing-masing auto-assign ke kamar VIP spesifik).
 
 ```json
 {
-    "data": [
-         {
-            "id": 2,
-            "booking_code": "VP3C4D",
-            "property_id": 6,
-            "status": "booked",
-            "payment_time_limit": "2026-04-14 16:00:00",
-            "schedules": [
-                { "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
-            ],
-            "property": { "id": 6, "name": "Kamar 101", "type": { "name": "Kamar VIP" } }
-        },
-        {
-            "id": 3,
-            "booking_code": "VP5E6F",
-            "property_id": 7,
-            "status": "booked",
-            "payment_time_limit": "2026-04-14 16:00:00",
-            "schedules": [
-                { "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
-            ],
-            "property": { "id": 7, "name": "Kamar 102", "type": { "name": "Kamar VIP" } }
-        },
-        {
-            "id": 4,
-            "booking_code": "VP7G8H",
-            "property_id": 8,
-            "status": "booked",
-            "payment_time_limit": "2026-04-14 16:00:00",
-            "schedules": [
-                { "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
-            ],
-            "property": { "id": 8, "name": "Kamar 103", "type": { "name": "Kamar VIP" } }
-        }
-    ]
+    "data": {
+        "id": 2,
+        "booking_code": "X9P2L1",
+        "status": "booked",
+        "payment_time_limit": "2026-04-14 16:00:00",
+        "items": [
+            {
+                "id": 2,
+                "property_id": 6,
+                "property": { "id": 6, "name": "Kamar 101", "type": { "name": "Kamar VIP" } },
+                "schedules": [
+                    { "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
+                ]
+            },
+            {
+                "id": 3,
+                "property_id": 7,
+                "property": { "id": 7, "name": "Kamar 102", "type": { "name": "Kamar VIP" } },
+                "schedules": [
+                    { "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
+                ]
+            },
+            {
+                "id": 4,
+                "property_id": 8,
+                "property": { "id": 8, "name": "Kamar 103", "type": { "name": "Kamar VIP" } },
+                "schedules": [
+                    { "start_time": "2026-04-14 14:00:00", "end_time": "2026-04-17 12:00:00" }
+                ]
+            }
+        ]
+    }
 }
 ```
 
-> **Penting:** Simpan `booking_code` dan `id` dari setiap item response ke database lokal Anda. Gunakan `id` untuk membatalkan booking, dan `booking_code` sebagai kode referensi unik lintas sistem.
+---
+
+### ⭐ Skenario C: Memesan Campuran (Ruang Kelas + Kamar)
+
+**Kasus:** Pelatihan 3 hari perlu 2 ruang kelas (Borobudur + Prambanan) dengan jadwal harian loncat + 8 kamar VIP untuk peserta.
+
+**Request:**
+```bash
+curl -X POST http://localhost:8000/web/bookings \
+     -H "X-API-Key: secret_api_key_123" \
+     -H "Accept: application/json" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "contact_name": "Siti Rahayu",
+       "contact_email": "siti@bumn.co.id",
+       "contact_phone": "08111222333",
+       "institution": "PT PLN Persero",
+       "items": [
+         {
+           "property_id": 1,
+           "schedules": [
+             { "start_time": "2026-05-05 08:00:00", "end_time": "2026-05-05 16:00:00" },
+             { "start_time": "2026-05-06 08:00:00", "end_time": "2026-05-06 16:00:00" },
+             { "start_time": "2026-05-07 08:00:00", "end_time": "2026-05-07 12:00:00" }
+           ]
+         },
+         {
+           "property_id": 2,
+           "schedules": [
+             { "start_time": "2026-05-05 08:00:00", "end_time": "2026-05-05 16:00:00" },
+             { "start_time": "2026-05-06 08:00:00", "end_time": "2026-05-06 16:00:00" },
+             { "start_time": "2026-05-07 08:00:00", "end_time": "2026-05-07 12:00:00" }
+           ]
+         },
+         {
+           "property_id": 6,
+           "quantity": 8,
+           "schedules": [
+             { "start_time": "2026-05-04 14:00:00", "end_time": "2026-05-07 12:00:00" }
+           ]
+         }
+       ]
+     }'
+```
+
+**Response:** Satu booking dengan `items[]` berisi 2 entry ruang kelas + 8 entry kamar VIP (total 10 items).
+
+> **Penting:** Simpan nilai `booking_code` dari response ke database lokal Anda. Ini adalah satu-satunya kode referensi untuk seluruh paket pemesanan.
 
 ---
 
 ## 5. Konfirmasi Pembayaran (Lock Ruangan)
 
-Setelah pengguna berhasil melakukan checkout bayar di aplikasi Anda, segera panggil endpoint payment. Endpoint ini akan mengubah status `booked` menjadi `scheduled` dan benar-benar **mengunci ketersediaan kamar** secara definitif.
+Setelah pengguna membayar, panggil endpoint ini. Status berubah dari `booked` menjadi `scheduled` dan **mengunci semua item** secara definitif.
 
 ### Endpoint
 
@@ -341,7 +362,7 @@ PUT /web/bookings/{id}/payment
 
 | Parameter | Tipe | Wajib | Keterangan |
 |:---|:---|:---|:---|
-| `id` | integer (URL) | ✅ | ID Booking (bukan ID property) yang akan di-lock |
+| `id` | integer (URL) | ✅ | ID Booking yang akan di-lock |
 
 **Request:**
 ```bash
@@ -358,30 +379,32 @@ curl -X PUT http://localhost:8000/web/bookings/2/payment \
     "data": {
         "id": 2,
         "status": "scheduled",
-        "property_id": 6
+        "items": [...]
     }
 }
 ```
 
-> **Smart Auto-Reassign:** Khusus untuk pemesanan kamar (virtual ID 6, 7, 8), jika kamar fisik yang ditetapkan di awal ternyata sudah dibooking dan dibayar duluan oleh orang lain (bentrok), API ini akan bertindak pintar dan otomatis mencari unit kamar kosong lain dalam tipe yang sama sisa stoknya, lalu merespon dengan `success`! Kegagalan transfer pembayaran (bentrok yang tidak tertolong) hanya terjadi jika *"semua unit kamar"* bertipe tersebut serentak dibayar orang lain hingga habis.
+> **Smart Auto-Reassign:** Jika salah satu kamar fisik sudah dibayar orang lain (bentrok), API otomatis mencari kamar kosong lain dalam tipe yang sama. Gagal hanya bila *semua unit* habis.
 
 ---
 
 ## 6. Membatalkan Pemesanan
 
+Cukup **satu kali** cancel untuk membatalkan seluruh booking (termasuk semua item di dalamnya).
+
 ### Endpoint
 
 ```
-PUT /web/bookings/{id}/cancel
+PUT /web/bookings/{booking_code}/cancel
 ```
 
 | Parameter | Tipe | Wajib | Keterangan |
 |:---|:---|:---|:---|
-| `id` | integer (URL) | ✅ | ID Booking yang akan dibatalkan (dari response saat booking dibuat) |
+| `booking_code` | string (URL) | ✅ | Kode booking unik dari response saat booking dibuat |
 
 **Request:**
 ```bash
-curl -X PUT http://localhost:8000/web/bookings/2/cancel \
+curl -X PUT http://localhost:8000/web/bookings/X9P2L1/cancel \
      -H "X-API-Key: secret_api_key_123" \
      -H "Accept: application/json"
 ```
@@ -394,8 +417,6 @@ curl -X PUT http://localhost:8000/web/bookings/2/cancel \
 }
 ```
 
-> **Catatan untuk Kamar:** Jika Anda memesan 3 kamar dan ingin membatalkan semua, Anda perlu mengirim 3 request cancel terpisah (satu per booking ID).
-
 ---
 
 ## 7. Kode Error
@@ -404,94 +425,60 @@ curl -X PUT http://localhost:8000/web/bookings/2/cancel \
 |:---|:---|:---|
 | `200` | Sukses / Payment Berhasil | — |
 | `201` | Booking berhasil dibuat | — |
-| `404` | ID properti tidak ditemukan | `"Property tidak ditemukan"` |
-| `404` | ID booking tidak ditemukan | `"Booking not found"` |
-| `404` | ID di luar jangkauan (bukan 1-8) | `"ID Properti (9) tidak valid untuk sistem eksternal."` |
+| `404` | ID properti tidak ditemukan | `"Property ID 9 tidak ditemukan"` |
+| `404` | Booking tidak ditemukan | `"Booking not found"` |
 | `422` | Properti sedang maintenance | `"Property tidak tersedia (status: maintenance)"` |
-| `422` | Jadwal bentrok dengan booking lain | `"Property tidak tersedia pada jadwal tanggal tersebut"` |
+| `422` | Jadwal bentrok | `"Property 'Ruang Kelas Borobudur' tidak tersedia pada jadwal tersebut"` |
 | `422` | Stok kamar tidak cukup | `"Kapasitas kamar tidak cukup. Hanya tersedia 2 unit."` |
-| `409` | Payment Gagal, kapasitas diserobot habis | `"Pembayaran ditolak. Kapasitas property sudah penuh karena pengguna lain telah membayar lebih dulu."` |
-| `422` | Payment status tidak diizinkan | `"Booking status is not applicable for payment"` |
-| `422` | Validasi input gagal | `{ "errors": { "contact_email": ["..."] } }` |
+| `422` | ID di luar jangkauan | `"ID Properti (9) tidak valid untuk sistem eksternal."` |
+| `409` | Payment gagal, kapasitas habis | `"Pembayaran ditolak. Property sudah penuh."` |
+| `422` | Status tidak sesuai untuk payment | `"Booking status is not applicable for payment"` |
 
 ---
 
 ## 8. Alur Integrasi Lengkap
 
-Berikut adalah alur yang direkomendasikan untuk implementasi di sisi website:
-
-### Alur Pemesanan Ruang Kelas / Rapat (ID 1-5)
-
 ```
 ┌─────────────────────────────────────────────┐
-│  1. User memilih ruangan (ID 1-5)           │
-│  2. User mengisi jadwal (boleh loncat)      │
+│  1. User memilih properti yang dibutuhkan   │
+│     - Ruang kelas (ID 1-5)                  │
+│     - Kamar inap (ID 6/7/8 + quantity)      │
+│     - Atau KOMBINASI keduanya               │
+│  2. User mengisi jadwal per jenis properti  │
 │  3. User submit form                        │
 └──────────────────┬──────────────────────────┘
                    │
                    ▼
      GET /web/properties/{id}/availability
-     (Opsional: cek dulu sebelum submit)
+     (Opsional: cek dulu per properti)
                    │
                    ▼
          POST /web/bookings
-         { property_id: 1, schedules: [...] }
+         { items: [
+             { property_id: 1, schedules: [...] },
+             { property_id: 6, quantity: 8, schedules: [...] }
+         ]}
                    │
-               ┌────┴────┐
-               │         │
-            201 OK    422 Error
-               │         │
-               ▼         ▼
-          Simpan      Tampilkan
-        (ID booked)   pesan error
+               ┌───┴────┐
+               │        │
+            201 OK   422 Error
+               │        │
+               ▼        ▼
+          Simpan     Tampilkan
+        booking_code  pesan error
+        (1 kode utk
+        semua item)
                │
       [User bayar invoice...]
                │
                ▼
       PUT /bookings/{id}/payment
+      (1x panggil utk seluruh booking)
                │
           ┌────┴────┐
           │         │
        200 OK    409 Gagal
-     (Terkunci) (Direbut orang)
+     (Semua item   (Kapasitas habis)
+      terkunci)
 ```
 
-### Alur Pemesanan Kamar Inap (ID 6, 7, 8)
-
-```
-┌─────────────────────────────────────────────┐
-│  1. User memilih tipe kamar (ID 6/7/8)      │
-│  2. User mengisi tanggal check-in/out       │
-│  3. User mengisi jumlah kamar (quantity)     │
-│  4. User submit form                        │
-└──────────────────┬──────────────────────────┘
-                   │
-                   ▼
-     GET /web/properties/{id}/availability
-     → Gunakan available_count untuk
-       validasi max quantity di form
-                   │
-                   ▼
-         POST /web/bookings
-         { property_id: 6, quantity: 3,
-           schedules: [{ check-in → check-out }] }
-                   │
-               ┌────┴────┐
-               │         │
-            201 OK    422 Error
-               │         │
-               ▼         ▼
-           Simpan     Tampilkan
-         (ID booked)  pesan error
-               │
-      [User bayar invoice...]
-               │
-               ▼
-     PUT /bookings/{id}/payment (loop per ID)
-               │
-          ┌────┴────┐
-          │         │
-       200 OK    409 Gagal  
-   (Otomatis cari (Semua ludes
-   kamar kosong   dibayar orang)
-    lain jk bentrok)
