@@ -32,6 +32,13 @@ class BookingController extends Controller
             });
         }
 
+        // Filter by property_id (booking contains specific property)
+        if ($request->has('property_id')) {
+            $query->whereHas('items', function ($q) use ($request) {
+                $q->where('property_id', $request->property_id);
+            });
+        }
+
         // Sorting
         $allowedSortFields = ['start_date', 'end_date', 'created_at', 'status', 'booking_code'];
         $sortBy = in_array($request->get('sort_by'), $allowedSortFields) ? $request->get('sort_by') : 'created_at';

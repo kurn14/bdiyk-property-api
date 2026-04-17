@@ -75,6 +75,7 @@ Authorization: Bearer {token}
 | `search`         | string  | ❌    | Cari berdasarkan kode booking (`booking_code`) |
 | `status`         | string  | ❌    | Filter status (lihat [Referensi Status](#referensi-status-booking) di bawah) |
 | `property_type_id` | integer | ❌  | Filter berdasarkan tipe properti (1-5) |
+| `property_id`    | integer | ❌    | Filter berdasarkan properti ID spesifik |
 | `sort_by`        | string  | ❌    | Kolom sorting: `start_date`, `end_date`, `created_at`, `status`, `booking_code` (default: `created_at`) |
 | `sort_order`     | string  | ❌    | Arah sorting: `asc` (menaik) atau `desc` (menurun). Default: `desc` |
 
