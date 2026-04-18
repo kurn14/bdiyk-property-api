@@ -210,6 +210,7 @@ curl -X POST http://localhost:8000/web/bookings \
     "data": {
         "id": 1,
         "booking_code": "QW8R9Y",
+        "source": "web",
         "status": "booked",
         "payment_time_limit": "2026-04-14 16:00:00",
         "contact_name": "Budi Santoso",
@@ -267,6 +268,7 @@ API mengembalikan **1 booking** dengan **3 items** (masing-masing auto-assign ke
     "data": {
         "id": 2,
         "booking_code": "X9P2L1",
+        "source": "web",
         "status": "booked",
         "payment_time_limit": "2026-04-14 16:00:00",
         "items": [
@@ -378,6 +380,7 @@ curl -X PUT http://localhost:8000/web/bookings/2/payment \
     "message": "Pembayaran berhasil. Status booking menjadi scheduled.",
     "data": {
         "id": 2,
+        "source": "web",
         "status": "scheduled",
         "items": [...]
     }

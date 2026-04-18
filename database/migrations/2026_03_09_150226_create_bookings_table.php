@@ -23,6 +23,7 @@ return new class extends Migration
             $table->dateTime('payment_time_limit')->nullable();
             $table->dateTime('start_date')->nullable();
             $table->dateTime('end_date')->nullable();
+            $table->string('source')->nullable()->default('flutter');
             $table->timestamps();
         });
 

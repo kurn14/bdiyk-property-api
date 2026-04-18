@@ -122,6 +122,7 @@ curl -X GET "http://localhost:8001/bookings?status=scheduled&sort_by=end_date&so
         {
             "id": 1,
             "booking_code": "BK1A2B",
+            "source": "flutter",
             "status": "scheduled",
             "contact_name": "Budi Santoso",
             "contact_email": "budi@instansi.go.id",
@@ -209,6 +210,7 @@ Authorization: Bearer {token}
 {
     "id": 5,
     "booking_code": "BK5X9Z",
+    "source": "flutter",
     "status": "scheduled",
     "start_date": "2026-04-20 08:00:00",
     "end_date": "2026-04-22 12:00:00",
@@ -321,6 +323,7 @@ curl -X GET "http://localhost:8001/bookings/monitoring?period=monthly&date=2026-
          {
             "id": 1,
             "booking_code": "BK1A2B",
+            "source": "flutter",
             "status": "scheduled",
             "contact_name": "Budi Santoso",
             "start_date": "2026-04-14 08:00:00",
@@ -341,6 +344,7 @@ curl -X GET "http://localhost:8001/bookings/monitoring?period=monthly&date=2026-
         {
             "id": 2,
             "booking_code": "BK3C4D",
+            "source": "flutter",
             "status": "booked",
             "contact_name": "Andi Saputra",
             "payment_time_limit": "2026-04-14 16:00:00",
@@ -471,6 +475,7 @@ curl -X GET "http://localhost:8001/bookings/calendar/2026-04-14" \
         {
             "id": 1,
             "booking_code": "BK1A2B",
+            "source": "flutter",
             "status": "scheduled",
             "contact_name": "Budi Santoso",
             "start_date": "2026-04-14 08:00:00",
@@ -490,6 +495,7 @@ curl -X GET "http://localhost:8001/bookings/calendar/2026-04-14" \
         {
             "id": 2,
             "booking_code": "BK3C4D",
+            "source": "flutter",
             "status": "booked",
             "contact_name": "Andi Saputra",
             "payment_time_limit": "2026-04-14 16:00:00",
